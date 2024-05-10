@@ -1,0 +1,128 @@
+import random
+
+class Player:
+    def __init__(self, name):
+        # Инициализация игрока с именем и доской 6x6
+        self.name = name
+        self.board = [[' ' for _ in range(6)] for _ in range(6)]
+
+    def place_ship(self, ship_size, ship_label):
+        # Размещает корабль случайным образом на доске
+        while True:
+            is_vertical = random.choice([True, False])
+            if is_vertical:
+                ship_row = random.randint(0, 6 - ship_size)
+                ship_col = random.randint(0, 5)
+            else:
+                ship_row = random.randint(0, 5)
+                ship_col = random.randint(0, 6 - ship_size)
+
+            ship_positions = [(ship_row + i if is_vertical else ship_row,
+                            ship_col if is_vertical else ship_col + i) for i in range(ship_size)]
+
+            valid_position = all(0 <= row < 6 and 0 <= col < 6 and self.board[row][col] == ' ' for row, col in ship_positions) and self.check_ship_distance(ship_positions)
+            if valid_position:
+                for row, col in ship_positions:
+                    self.board[row][col] = ship_label
+                break
+
+    def check_ship_distance(self, ship_positions):
+        # Проверяет расстояние между кораблями
+        for row, col in ship_positions:
+            for r in range(row - 1, row + 2):
+                for c in range(col - 1, col + 2):
+                    if 0 <= r < 6 and 0 <= c < 6:
+                        if self.board[r][c] == '■':
+                            return False
+        return True
+
+    def check_hit(self, row, col):
+        # Проверяет, было ли попадание в клетку
+        return self.board[row][col] == '■'
+
+class Game:
+    def __init__(self, player_name):
+        # Инициализация игры с игроком и ИИ
+        self.player = Player(player_name)
+        self.ai = Player('AI')
+
+    def play(self):
+        ships = [(3, '■'), (2, '■'), (2, '■'), (1, '■'), (1, '■'), (1, '■'), (1, '■')]
+        for ship_size, ship_label in ships:
+            self.player.place_ship(ship_size, ship_label)
+            self.ai.place_ship(ship_size, ship_label)
+
+        while any('■' in row for row in self.player.board) and any('■' in row for row in self.ai.board):
+            self.player_turn()
+            if not any('■' in row for row in self.ai.board):
+                print('Вы победили! Все корабли ИИ потоплены!')
+                break
+
+            self.ai_turn()
+            if not any('■' in row for row in self.player.board):
+                print('Вы проиграли! Ваши корабли потоплены!')
+                break
+
+    def player_turn(self):
+        # Обработка хода игрока
+        print("\nДоска игрока:")
+        self.print_board(self.player.board, show_ships=True)
+        print("Доска ИИ:")
+        self.print_board(self.ai.board)
+
+        try:
+            row = int(input('Введите номер строки для выстрела (1-6): ')) - 1
+            col = int(input('Введите номер столбца для выстрела (1-6): ')) - 1
+        except ValueError:
+            print('Пожалуйста, введите число!')
+            return self.player_turn()
+
+        if 0 <= row < 6 and 0 <= col < 6:
+            if self.ai.check_hit(row, col):
+                print('Попадание!')
+                self.ai.board[row][col] = 'X'
+            else:
+                print('Мимо!')
+                self.ai.board[row][col] = 'T'
+        else:
+            print('Введены неверные координаты!')
+            return self.player_turn()
+
+    def ai_turn(self):
+        # Обработка хода ИИ
+        while True:
+            row = random.randint(0, 5)
+            col = random.randint(0, 5)
+
+            if self.player.check_hit(row, col):
+                print('ИИ стреляет: Попадание!')
+                self.player.board[row][col] = 'X'
+                break
+            elif self.player.board[row][col] == 'X' or self.player.board[row][col] == 'T':
+                continue
+            else:
+                print('ИИ стреляет: Мимо!')
+                self.player.board[row][col] = 'T'
+                break
+
+        print("\nДоска игрока после хода:")
+        self.print_board(self.player.board, show_ships=False)
+        print("Доска ИИ после хода:")
+        self.print_board(self.ai.board, show_ships=True)
+
+    def print_board(self, board, show_ships=False):
+        # Выводит доску на экран
+        print('  1 2 3 4 5 6')
+        for i, row in enumerate(board, start=1):
+            if show_ships:
+                row_display = [col if col != '■' else '■' for col in row]
+            else:
+                row_display = [col if col in (' ', 'T', 'X') else ' ' for col in row]
+            print(f'{i}|{"|".join(row_display)}|')
+        print()
+
+# Главная часть программы
+player_name = input('Введите ваше имя: ')
+game = Game(player_name)
+game.play()
+print("\n--- Игра окончена! ---")
